@@ -12,7 +12,7 @@ struct RecognizedTextFormatterTests {
             RecognizedTextLine(text: "hello", boundingBox: CGRect(x: 0.1, y: 0.7, width: 0.2, height: 0.1))
         ]
 
-        #expect(formatter.format(lines) == "hello\nworld\nsecond")
+        #expect(formatter.format(lines) == "hello world\nsecond")
     }
 
     @Test
@@ -24,5 +24,27 @@ struct RecognizedTextFormatterTests {
         ]
 
         #expect(formatter.format(lines) == "value")
+    }
+
+    @Test
+    func keepsSeparateRowsWhenVerticalDistanceIsLarge() {
+        let formatter = RecognizedTextFormatter()
+        let lines = [
+            RecognizedTextLine(text: "top", boundingBox: CGRect(x: 0.1, y: 0.7, width: 0.2, height: 0.1)),
+            RecognizedTextLine(text: "bottom", boundingBox: CGRect(x: 0.1, y: 0.5, width: 0.2, height: 0.1))
+        ]
+
+        #expect(formatter.format(lines) == "top\nbottom")
+    }
+
+    @Test
+    func groupsSlightlyStaggeredFragmentsOnSameRow() {
+        let formatter = RecognizedTextFormatter()
+        let lines = [
+            RecognizedTextLine(text: "left", boundingBox: CGRect(x: 0.1, y: 0.7, width: 0.2, height: 0.1)),
+            RecognizedTextLine(text: "right", boundingBox: CGRect(x: 0.4, y: 0.665, width: 0.2, height: 0.1))
+        ]
+
+        #expect(formatter.format(lines) == "left right")
     }
 }

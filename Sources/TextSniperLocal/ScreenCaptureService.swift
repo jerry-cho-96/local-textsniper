@@ -2,10 +2,15 @@ import AppKit
 import CoreGraphics
 
 struct ScreenCaptureService {
-    func capture(rect appKitRect: CGRect) throws -> CGImage {
-        let normalizedRect = appKitRect.standardized.integral
+    private let capturePadding: CGFloat = 8
 
-        guard normalizedRect.width >= 1, normalizedRect.height >= 1 else {
+    func capture(rect appKitRect: CGRect) throws -> CGImage {
+        let normalizedRect = CaptureGeometry
+            .padded(appKitRect.standardized, by: capturePadding)
+            .intersection(CaptureGeometry.desktopBounds)
+            .integral
+
+        guard !normalizedRect.isNull, normalizedRect.width >= 1, normalizedRect.height >= 1 else {
             throw ScreenCaptureError.emptySelection
         }
 
@@ -46,17 +51,25 @@ enum ScreenCaptureError: LocalizedError {
 
 private enum CoordinateConverter {
     static func cgWindowRect(from appKitRect: CGRect) -> CGRect {
-        let desktopBounds = NSScreen.screens
+        return CGRect(
+            x: appKitRect.minX,
+            y: CaptureGeometry.desktopBounds.maxY - appKitRect.maxY,
+            width: appKitRect.width,
+            height: appKitRect.height
+        )
+    }
+}
+
+private enum CaptureGeometry {
+    static var desktopBounds: CGRect {
+        NSScreen.screens
             .map(\.frame)
             .reduce(CGRect.null) { partialResult, frame in
                 partialResult.union(frame)
             }
+    }
 
-        return CGRect(
-            x: appKitRect.minX,
-            y: desktopBounds.maxY - appKitRect.maxY,
-            width: appKitRect.width,
-            height: appKitRect.height
-        )
+    static func padded(_ rect: CGRect, by padding: CGFloat) -> CGRect {
+        rect.insetBy(dx: -padding, dy: -padding)
     }
 }
