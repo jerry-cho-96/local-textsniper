@@ -2,13 +2,9 @@ import AppKit
 import CoreGraphics
 
 struct ScreenCaptureService {
-    private let capturePadding: CGFloat = 8
-
     func capture(rect appKitRect: CGRect) throws -> CGImage {
-        let normalizedRect = CaptureGeometry
-            .padded(appKitRect.standardized, by: capturePadding)
+        let normalizedRect = appKitRect.standardized
             .intersection(CaptureGeometry.desktopBounds)
-            .integral
 
         guard !normalizedRect.isNull, normalizedRect.width >= 1, normalizedRect.height >= 1 else {
             throw ScreenCaptureError.emptySelection
@@ -67,9 +63,5 @@ private enum CaptureGeometry {
             .reduce(CGRect.null) { partialResult, frame in
                 partialResult.union(frame)
             }
-    }
-
-    static func padded(_ rect: CGRect, by padding: CGFloat) -> CGRect {
-        rect.insetBy(dx: -padding, dy: -padding)
     }
 }

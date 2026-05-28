@@ -13,9 +13,11 @@ public struct RecognizedTextLine: Sendable, Equatable {
 
 public struct RecognizedTextFormatter: Sendable {
     private let sameLineThreshold: CGFloat
+    private let minimumSameLineOverlapRatio: CGFloat
 
-    public init(sameLineThreshold: CGFloat = 0.025) {
+    public init(sameLineThreshold: CGFloat = 0.012, minimumSameLineOverlapRatio: CGFloat = 0.35) {
         self.sameLineThreshold = sameLineThreshold
+        self.minimumSameLineOverlapRatio = minimumSameLineOverlapRatio
     }
 
     public func format(_ lines: [RecognizedTextLine]) -> String {
@@ -24,9 +26,11 @@ public struct RecognizedTextFormatter: Sendable {
             .filter { !$0.text.isEmpty }
 
         let sorted = trimmedLines.sorted { lhs, rhs in
-            let verticalDistance = abs(lhs.boundingBox.midY - rhs.boundingBox.midY)
+            if isSameVisualRow(lhs.boundingBox, rhs.boundingBox) {
+                if abs(lhs.boundingBox.minX - rhs.boundingBox.minX) <= 0.001 {
+                    return lhs.boundingBox.midY > rhs.boundingBox.midY
+                }
 
-            if verticalDistance <= sameLineThreshold {
                 return lhs.boundingBox.minX < rhs.boundingBox.minX
             }
 
@@ -54,9 +58,9 @@ public struct RecognizedTextFormatter: Sendable {
 
             let rowMidY = lastRow.map(\.boundingBox.midY).reduce(0, +) / CGFloat(lastRow.count)
             let rowHeight = lastRow.map(\.boundingBox.height).reduce(0, +) / CGFloat(lastRow.count)
-            let allowedDistance = max(sameLineThreshold, max(rowHeight, line.boundingBox.height) * 0.4)
+            let rowBox = CGRect(x: 0, y: rowMidY - rowHeight / 2, width: 1, height: rowHeight)
 
-            if abs(rowMidY - line.boundingBox.midY) <= allowedDistance {
+            if isSameVisualRow(rowBox, line.boundingBox) {
                 rows[rows.count - 1].append(line)
             } else {
                 rows.append([line])
@@ -64,5 +68,19 @@ public struct RecognizedTextFormatter: Sendable {
         }
 
         return rows
+    }
+
+    private func isSameVisualRow(_ lhs: CGRect, _ rhs: CGRect) -> Bool {
+        guard lhs.height > 0, rhs.height > 0 else {
+            return abs(lhs.midY - rhs.midY) <= sameLineThreshold
+        }
+
+        let overlap = max(0, min(lhs.maxY, rhs.maxY) - max(lhs.minY, rhs.minY))
+        let minimumHeight = min(lhs.height, rhs.height)
+        let overlapRatio = overlap / minimumHeight
+        let centerDistance = abs(lhs.midY - rhs.midY)
+        let centerLimit = max(sameLineThreshold, minimumHeight * 0.45)
+
+        return overlapRatio >= minimumSameLineOverlapRatio && centerDistance <= centerLimit
     }
 }

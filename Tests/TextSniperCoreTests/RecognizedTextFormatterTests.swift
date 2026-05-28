@@ -38,6 +38,18 @@ struct RecognizedTextFormatterTests {
     }
 
     @Test
+    func keepsTightlyStackedRowsSeparate() {
+        let formatter = RecognizedTextFormatter()
+        let lines = [
+            RecognizedTextLine(text: "1. title", boundingBox: CGRect(x: 0.03, y: 0.800, width: 0.20, height: 0.018)),
+            RecognizedTextLine(text: "second body line", boundingBox: CGRect(x: 0.03, y: 0.752, width: 0.45, height: 0.018)),
+            RecognizedTextLine(text: "first body line", boundingBox: CGRect(x: 0.04, y: 0.776, width: 0.40, height: 0.018))
+        ]
+
+        #expect(formatter.format(lines) == "1. title\nfirst body line\nsecond body line")
+    }
+
+    @Test
     func groupsSlightlyStaggeredFragmentsOnSameRow() {
         let formatter = RecognizedTextFormatter()
         let lines = [
